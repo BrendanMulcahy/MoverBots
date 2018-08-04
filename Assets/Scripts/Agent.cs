@@ -211,10 +211,10 @@ namespace MLAgents
         /// action that we wish to reinforce/reward, and set to a negative value
         /// when the agent performs a "bad" action that we wish to punish/deter.
         /// Additionally, the magnitude of the reward should not exceed 1.0
-        float reward;
+        protected float reward;
 
         /// Keeps track of the cumulative reward in this episode.
-        float cumulativeReward;
+        protected float cumulativeReward;
 
         /// Whether or not the agent requests an action.
         bool requestAction;
@@ -234,7 +234,7 @@ namespace MLAgents
         /// Note that this value is different for each agent, and may not overlap
         /// with the step counter in the Academy, since agents reset based on
         /// their own experience.
-        int stepCount;
+        protected int stepCount;
 
         /// Flag to signify that an agent has been reset but the fact that it is
         /// done has not been communicated (required for On Demand Decisions).
