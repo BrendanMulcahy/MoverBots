@@ -77,7 +77,7 @@ namespace Assets.Scripts.Mover
             }
 
             transform.Rotate(rotateDir, Time.deltaTime * 200f);
-            _rigidbody.AddForce(dirToGo * 1.5f, ForceMode.VelocityChange);
+            _rigidbody.AddForce(dirToGo * 0.35f, ForceMode.VelocityChange);
         }
 
         public override void CollectObservations()
