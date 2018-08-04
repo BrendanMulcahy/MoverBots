@@ -4,6 +4,8 @@ namespace Assets.Scripts
 {
     public class PickupObject : MonoBehaviour
     {
+        public bool Scored = false;
+
         private Transform _holdingPoint;
 
         private Rigidbody _rigidBody;
@@ -39,6 +41,14 @@ namespace Assets.Scripts
         {
             _holdingPoint = null;
             _rigidBody.useGravity = true;
+        }
+
+        private void OnCollisionEnter(Collision collision)
+        {
+            if (collision.gameObject.CompareTag("score"))
+            {
+                Scored = true;
+            }
         }
     }
 }

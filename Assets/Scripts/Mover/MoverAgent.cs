@@ -17,6 +17,7 @@ namespace Assets.Scripts.Mover
         [SerializeField] private Transform _holdingPoint;
         [SerializeField] private PickupZone _pickupZone;
         private Rigidbody _rigidbody;
+        private PickupObject _ballPickup;
 
         private void Start()
         {
@@ -26,17 +27,12 @@ namespace Assets.Scripts.Mover
             _agentStartPos = gameObject.transform.position;
             _agentStartRot = gameObject.transform.rotation;
             _rigidbody = GetComponent<Rigidbody>();
+            _ballPickup = _ball.GetComponent<PickupObject>();
         }
 
         public override void AgentAction(float[] act, string textAction)
         {
-            if (gameObject.transform.position.y < 0)
-            {
-                AddReward(-1f);
-                Done();
-            }
-
-            if (_ball.transform.position.y < 0)
+            if (_ballPickup.Scored)
             {
                 SetReward(2f);
                 Done();
@@ -91,6 +87,9 @@ namespace Assets.Scripts.Mover
 
         public override void AgentReset()
         {
+            _ballPickup.Scored = false;
+            Drop();
+
             gameObject.transform.position = _agentStartPos;
             gameObject.transform.rotation = _agentStartRot;
             _rigidbody.velocity = Vector3.zero;
@@ -99,8 +98,15 @@ namespace Assets.Scripts.Mover
             _ball.transform.position = new Vector3(_ballStartPos.x, _ballStartPos.y, _ballStartPos.z + Random.value * 3.5f - 7);
             _ballRigidbody.velocity = Vector3.zero;
             _ballRigidbody.angularVelocity = Vector3.zero;
+        }
 
-            Drop();
+        private void OnCollisionEnter(Collision collision)
+        {
+            if (collision.gameObject.CompareTag("score"))
+            {
+                SetReward(-1f);
+                Done();
+            }
         }
 
         private void PickUp()
