@@ -6,6 +6,7 @@ namespace Assets.Scripts.Mover
 {
     public class MoverAgent : Agent
     {
+        private RayPerception _rayPer;
         private Vector3 _agentStartPos;
         private Quaternion _agentStartRot;
         [SerializeField] private GameObject _ball;
@@ -19,10 +20,13 @@ namespace Assets.Scripts.Mover
         private Rigidbody _rigidbody;
         private PickupObject _ballPickup;
 
-        private void Start()
+
+        public override void InitializeAgent()
         {
+            base.InitializeAgent();
             _ballStartPos = _ball.transform.position;
             _ballRigidbody = _ball.transform.GetComponent<Rigidbody>();
+            _rayPer = GetComponent<RayPerception>();
 
             _agentStartPos = gameObject.transform.position;
             _agentStartRot = gameObject.transform.rotation;
@@ -78,11 +82,20 @@ namespace Assets.Scripts.Mover
 
         public override void CollectObservations()
         {
-            AddVectorObs(transform.position);
-            AddVectorObs(_ball.transform.position);
-            AddVectorObs(_ballRigidbody.velocity);
-            AddVectorObs(_ballRigidbody.angularVelocity);
-            AddVectorObs(transform.rotation.y);
+            const float rayDistance = 15f;
+            string[] detectableObjects = { "ground", "wall", "ball", "score" };
+
+            float[] rayAngles = { 20f, 90f, 160f, 45f, 135f, 70f, 110f };
+            AddVectorObs(_rayPer.Perceive(rayDistance, rayAngles, detectableObjects, 0f, 0f));
+
+            float[] rayAngles1 = { 25f, 95f, 165f, 50f, 140f, 75f, 115f };
+            AddVectorObs(_rayPer.Perceive(rayDistance, rayAngles1, detectableObjects, 0f, -5f));
+
+            //float[] rayAngles2 = { 15f, 85f, 155f, 40f, 130f, 65f, 105f };
+            //AddVectorObs(_rayPer.Perceive(rayDistance, rayAngles2, detectableObjects, 0f, -10f));
+
+            AddVectorObs(transform.InverseTransformDirection(_rigidbody.velocity));
+            AddVectorObs(IsItemHeld());
         }
 
         public override void AgentReset()
@@ -95,7 +108,7 @@ namespace Assets.Scripts.Mover
             _rigidbody.velocity = Vector3.zero;
             _rigidbody.angularVelocity = Vector3.zero;
 
-            _ball.transform.position = new Vector3(_ballStartPos.x, _ballStartPos.y, _ballStartPos.z + Random.value * 3.5f - 7);
+            _ball.transform.position = new Vector3(_ballStartPos.x, _ballStartPos.y, _ballStartPos.z + Random.value * 10f);
             _ballRigidbody.velocity = Vector3.zero;
             _ballRigidbody.angularVelocity = Vector3.zero;
         }
