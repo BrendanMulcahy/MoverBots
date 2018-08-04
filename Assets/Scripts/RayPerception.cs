@@ -13,6 +13,18 @@ namespace Assets.Scripts
         Vector3 endPosition;
         RaycastHit hit;
 
+        Color[] colors = new Color[]
+        {
+            Color.red,
+            Color.green,
+            Color.blue,
+            Color.grey,
+            Color.white,
+            Color.magenta,
+            Color.yellow,
+            Color.cyan,
+        };
+
         /// <summary>
         /// Creates perception vector to be used as part of an observation of an agent.
         /// </summary>
@@ -34,15 +46,12 @@ namespace Assets.Scripts
                 endPosition = transform.TransformDirection(
                     PolarToCartesian(rayDistance, angle));
                 endPosition.y = endOffset;
-                if (Application.isEditor)
-                {
-                    Debug.DrawRay(transform.position + new Vector3(0f, startOffset, 0f),
-                        endPosition, Color.black, 0.01f, true);
-                }
+
+                Color color = Color.black;
 
                 float[] subList = new float[detectableObjects.Length + 2];
                 if (Physics.SphereCast(transform.position +
-                                       new Vector3(0f, startOffset, 0f), 0.5f,
+                                       new Vector3(0f, startOffset, 0f), 0.3f,
                     endPosition, out hit, rayDistance))
                 {
                     for (int i = 0; i < detectableObjects.Length; i++)
@@ -51,6 +60,7 @@ namespace Assets.Scripts
                         {
                             subList[i] = 1;
                             subList[detectableObjects.Length + 1] = hit.distance / rayDistance;
+                            color = colors[i];
                             break;
                         }
                     }
@@ -61,6 +71,15 @@ namespace Assets.Scripts
                 }
 
                 perceptionBuffer.AddRange(subList);
+
+                if (Application.isEditor)
+                {
+                    if (color != Color.black)
+                    {
+                        Debug.DrawRay(transform.position + new Vector3(0f, startOffset, 0f),
+                            endPosition, color, 0.01f, true);
+                    }
+                }
             }
 
             return perceptionBuffer;
