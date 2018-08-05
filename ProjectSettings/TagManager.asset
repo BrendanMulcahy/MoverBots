@@ -8,6 +8,8 @@ TagManager:
   - ground
   - wall
   - ball
+  - redAgent
+  - blueAgent
   layers:
   - Default
   - TransparentFX

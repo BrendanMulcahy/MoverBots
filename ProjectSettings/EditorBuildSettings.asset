@@ -7,8 +7,11 @@ EditorBuildSettings:
   m_Scenes:
   - enabled: 0
     path: 
-    guid: 99c9720ab356a0642a771bea13969a05
-  - enabled: 1
-    path: Assets/Scenes/main.unity
+    guid: 00000000000000000000000000000000
+  - enabled: 0
+    path: Assets/MoverBots/main.unity
     guid: d430ee5e6ecf04d43b1a225edd3c8a1d
+  - enabled: 1
+    path: Assets/Soccer/soccer.unity
+    guid: 5cbf849ed7da134438d21efef4eb6f3e
   m_configObjects: {}
