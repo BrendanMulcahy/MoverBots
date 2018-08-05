@@ -133,14 +133,6 @@ namespace Assets.Scripts.Mover
                     pickupObject.PickUp(_holdingPoint);
                     _heldItem = pickupObject;
                 }
-                else
-                {
-                    AddReward(-0.01f);
-                }
-            }
-            else
-            {
-                AddReward(-0.01f);
             }
         }
 
@@ -150,10 +142,6 @@ namespace Assets.Scripts.Mover
             {
                 _heldItem.Drop();
                 _heldItem = null;
-            }
-            else
-            {
-                AddReward(-0.01f);
             }
         }
 
