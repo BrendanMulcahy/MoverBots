@@ -4,10 +4,10 @@ A small AI game based very loosely on the taxicab domain.  The goal is for the b
 ![Ray Casting](Images/Raycasting.PNG?raw=true "Ray Casting")
 
 The agents sense the world through ray casting.  This image shows a debugging view:
-Blue ray = sees ball
-Green ray = sees wall
-Red ray = floor
-Grey ray (hard to see) = score zone 
+ - Blue ray = sees ball
+ - Green ray = sees wall
+ - Red ray = floor
+ - Grey ray (hard to see) = score zone 
 
 ## Requirements
 
