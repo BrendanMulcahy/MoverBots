@@ -1,32 +1,43 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Assets.Scripts
 {
     /// <summary>
-    /// Ray perception component. Attach this to agents to enable "local perception"
-    /// via the use of ray casts directed outward from the agent. 
+    ///     Ray perception component. Attach this to agents to enable "local perception"
+    ///     via the use of ray casts directed outward from the agent.
     /// </summary>
     public class RayPerception : MonoBehaviour
     {
-        List<float> perceptionBuffer = new List<float>();
-        Vector3 endPosition;
-        RaycastHit hit;
+        private readonly HashSet<Collider> _selfCollider = new HashSet<Collider>();
 
-        Color[] colors = new Color[]
+        private readonly Color[] colors =
         {
-            Color.red,
+            Color.yellow,
             Color.green,
-            Color.blue,
-            Color.grey,
             Color.white,
             Color.magenta,
+            Color.blue,
+            Color.red,
             Color.yellow,
-            Color.cyan,
+            Color.cyan
         };
 
+        private Vector3 endPosition;
+        private readonly List<float> perceptionBuffer = new List<float>();
+
+        private void Start()
+        {
+            _selfCollider.Add(gameObject.GetComponent<Collider>());
+            foreach (Collider childCollider in gameObject.GetComponentsInChildren<Collider>())
+            {
+                _selfCollider.Add(childCollider);
+            }
+        }
+
         /// <summary>
-        /// Creates perception vector to be used as part of an observation of an agent.
+        ///     Creates perception vector to be used as part of an observation of an agent.
         /// </summary>
         /// <returns>The partial vector observation corresponding to the set of rays</returns>
         /// <param name="rayDistance">Radius of rays</param>
@@ -50,10 +61,12 @@ namespace Assets.Scripts
                 Color color = Color.black;
 
                 float[] subList = new float[detectableObjects.Length + 2];
-                if (Physics.SphereCast(transform.position +
-                                       new Vector3(0f, startOffset, 0f), 0.3f,
-                    endPosition, out hit, rayDistance))
+                List<RaycastHit> hits = Physics
+                    .SphereCastAll(transform.position + new Vector3(0f, startOffset, 0f), 0.3f, endPosition,
+                        rayDistance).Where(h => !_selfCollider.Contains(h.collider)).ToList();
+                if (hits.Count > 0)
                 {
+                    RaycastHit hit = hits.First();
                     for (int i = 0; i < detectableObjects.Length; i++)
                     {
                         if (hit.collider.gameObject.CompareTag(detectableObjects[i]))
@@ -77,7 +90,7 @@ namespace Assets.Scripts
                     if (color != Color.black)
                     {
                         Debug.DrawRay(transform.position + new Vector3(0f, startOffset, 0f),
-                            endPosition, color, 0.01f, true);
+                        endPosition, color, 0.01f, true);
                     }
                 }
             }
@@ -86,7 +99,7 @@ namespace Assets.Scripts
         }
 
         /// <summary>
-        /// Converts polar coordinate to cartesian coordinate.
+        ///     Converts polar coordinate to cartesian coordinate.
         /// </summary>
         public static Vector3 PolarToCartesian(float radius, float angle)
         {
@@ -96,7 +109,7 @@ namespace Assets.Scripts
         }
 
         /// <summary>
-        /// Converts degrees to radians.
+        ///     Converts degrees to radians.
         /// </summary>
         public static float DegreeToRadian(float degree)
         {
