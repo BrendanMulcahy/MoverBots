@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 
@@ -43,6 +44,12 @@ namespace MLAgents
         public string storedTextActions;
 
         /// <summary>
+        /// For discrete control, specifies the actions that the agent cannot take. Is true if
+        /// the action is masked.
+        /// </summary>
+        public bool[] actionMasks;
+
+        /// <summary>
         /// Used by the Trainer to store information about the agent. This data
         /// structure is not consumed or modified by the agent directly, they are
         /// just the owners of their trainier's memory. Currently, however, the
@@ -81,6 +88,7 @@ namespace MLAgents
         public float[] vectorActions;
         public string textActions;
         public List<float> memories;
+        public float value;
     }
 
     /// <summary>
@@ -211,10 +219,10 @@ namespace MLAgents
         /// action that we wish to reinforce/reward, and set to a negative value
         /// when the agent performs a "bad" action that we wish to punish/deter.
         /// Additionally, the magnitude of the reward should not exceed 1.0
-        protected float reward;
+        float reward;
 
         /// Keeps track of the cumulative reward in this episode.
-        protected float cumulativeReward;
+        float cumulativeReward;
 
         /// Whether or not the agent requests an action.
         bool requestAction;
@@ -234,7 +242,7 @@ namespace MLAgents
         /// Note that this value is different for each agent, and may not overlap
         /// with the step counter in the Academy, since agents reset based on
         /// their own experience.
-        protected int stepCount;
+        int stepCount;
 
         /// Flag to signify that an agent has been reset but the fact that it is
         /// done has not been communicated (required for On Demand Decisions).
@@ -248,6 +256,9 @@ namespace MLAgents
         /// to separate between different agents in the environment.
         int id;
 
+        /// Keeps track of the actions that are masked at each step.
+        private ActionMasker actionMasker;
+
         /// Array of Texture2D used to render to from render buffer before  
         /// transforming into float tensor.
         Texture2D[] textureArray;
@@ -257,10 +268,9 @@ namespace MLAgents
         void OnEnable()
         {
             textureArray = new Texture2D[agentParameters.agentCameras.Count];
-            for (int i = 0; i < brain.brainParameters.cameraResolutions.Length; i++)
+            for (int i = 0; i < agentParameters.agentCameras.Count; i++)
             {
-                textureArray[i] = new Texture2D(brain.brainParameters.cameraResolutions[i].width, 
-                    brain.brainParameters.cameraResolutions[i].height, TextureFormat.RGB24, false);
+                textureArray[i] = new Texture2D(1, 1, TextureFormat.RGB24, false);
             }
             id = gameObject.GetInstanceID();
             Academy academy = Object.FindObjectOfType<Academy>() as Academy;
@@ -456,15 +466,16 @@ namespace MLAgents
             }
 
             BrainParameters param = brain.brainParameters;
+            actionMasker = new ActionMasker(param);
             if (param.vectorActionSpaceType == SpaceType.continuous)
             {
-                action.vectorActions = new float[param.vectorActionSize];
-                info.storedVectorActions = new float[param.vectorActionSize];
+                action.vectorActions = new float[param.vectorActionSize[0]];
+                info.storedVectorActions = new float[param.vectorActionSize[0]];
             }
             else
             {
-                action.vectorActions = new float[1];
-                info.storedVectorActions = new float[1];
+                action.vectorActions = new float[param.vectorActionSize.Length];
+                info.storedVectorActions = new float[param.vectorActionSize.Length];
             }
 
             if (info.textObservation == null)
@@ -472,25 +483,14 @@ namespace MLAgents
             action.textActions = "";
             info.memories = new List<float>();
             action.memories = new List<float>();
-            if (param.vectorObservationSpaceType == SpaceType.continuous)
-            {
-                info.vectorObservation =
-                    new List<float>(param.vectorObservationSize);
-                info.stackedVectorObservation =
-                    new List<float>(param.vectorObservationSize
-                                    * brain.brainParameters.numStackedVectorObservations);
-                info.stackedVectorObservation.AddRange(
-                    new float[param.vectorObservationSize
-                              * param.numStackedVectorObservations]);
-            }
-            else
-            {
-                info.vectorObservation = new List<float>(1);
-                info.stackedVectorObservation =
-                    new List<float>(param.numStackedVectorObservations);
-                info.stackedVectorObservation.AddRange(
-                    new float[param.numStackedVectorObservations]);
-            }
+            info.vectorObservation =
+                new List<float>(param.vectorObservationSize);
+            info.stackedVectorObservation =
+                new List<float>(param.vectorObservationSize
+                                * brain.brainParameters.numStackedVectorObservations);
+            info.stackedVectorObservation.AddRange(
+                new float[param.vectorObservationSize
+                          * param.numStackedVectorObservations]);
 
             info.visualObservations = new List<Texture2D>();
         }
@@ -523,40 +523,25 @@ namespace MLAgents
             info.storedVectorActions = action.vectorActions;
             info.storedTextActions = action.textActions;
             info.vectorObservation.Clear();
+            actionMasker.ResetMask();
             CollectObservations();
+            info.actionMasks = actionMasker.GetMask();
 
             BrainParameters param = brain.brainParameters;
-            if (param.vectorObservationSpaceType == SpaceType.continuous)
+            if (info.vectorObservation.Count != param.vectorObservationSize)
             {
-                if (info.vectorObservation.Count != param.vectorObservationSize)
-                {
-                    throw new UnityAgentsException(string.Format(
-                        "Vector Observation size mismatch between continuous " +
-                        "agent {0} and brain {1}. " +
-                        "Was Expecting {2} but received {3}. ",
-                        gameObject.name, brain.gameObject.name,
-                        brain.brainParameters.vectorObservationSize,
-                        info.vectorObservation.Count));
-                }
-
-                info.stackedVectorObservation.RemoveRange(
-                    0, param.vectorObservationSize);
-                info.stackedVectorObservation.AddRange(info.vectorObservation);
+                throw new UnityAgentsException(string.Format(
+                    "Vector Observation size mismatch between continuous " +
+                    "agent {0} and brain {1}. " +
+                    "Was Expecting {2} but received {3}. ",
+                    gameObject.name, brain.gameObject.name,
+                    brain.brainParameters.vectorObservationSize,
+                    info.vectorObservation.Count));
             }
-            else
-            {
-                if (info.vectorObservation.Count != 1)
-                {
-                    throw new UnityAgentsException(string.Format(
-                        "Vector Observation size mismatch between discrete agent" +
-                        " {0} and brain {1}. Was Expecting {2} but received {3}. ",
-                        gameObject.name, brain.gameObject.name,
-                        1, info.vectorObservation.Count));
-                }
 
-                info.stackedVectorObservation.RemoveRange(0, 1);
-                info.stackedVectorObservation.AddRange(info.vectorObservation);
-            }
+            info.stackedVectorObservation.RemoveRange(
+                0, param.vectorObservationSize);
+            info.stackedVectorObservation.AddRange(info.vectorObservation);
 
             info.visualObservations.Clear();
             if (param.cameraResolutions.Length > agentParameters.agentCameras.Count)
@@ -607,6 +592,8 @@ namespace MLAgents
         ///     - <see cref="AddVectorObs(float[])"/>
         ///     - <see cref="AddVectorObs(List{float})"/>
         ///     - <see cref="AddVectorObs(Quaternion)"/>
+        ///     - <see cref="AddVectorObs(bool)"/>
+        ///     - <see cref="AddVectorObs(int, int)"/>
         /// Depending on your environment, any combination of these helpers can
         /// be used. They just need to be used in the exact same order each time
         /// this method is called and the resulting size of the vector observation
@@ -620,6 +607,57 @@ namespace MLAgents
         {
 
         }
+
+        /// <summary>
+        /// Sets an action mask for discrete control agents. When used, the agent will not be
+        /// able to perform the action passed as argument at the next decision. If no branch is
+        /// specified, the default branch will be 0. The actionIndex or actionIndices correspond
+        /// to the action the agent will be unable to perform.
+        /// </summary>
+        /// <param name="actionIndices">The indices of the masked actions on branch 0</param>
+        protected void SetActionMask(IEnumerable<int> actionIndices)
+        {
+            actionMasker.SetActionMask(0, actionIndices);
+        }
+        
+        /// <summary>
+        /// Sets an action mask for discrete control agents. When used, the agent will not be
+        /// able to perform the action passed as argument at the next decision. If no branch is
+        /// specified, the default branch will be 0. The actionIndex or actionIndices correspond
+        /// to the action the agent will be unable to perform.
+        /// </summary>
+        /// <param name="actionIndex">The index of the masked action on branch 0</param>
+        protected void SetActionMask(int actionIndex)
+        {
+            actionMasker.SetActionMask(0, new int[1]{actionIndex});
+        }
+        
+        /// <summary>
+        /// Sets an action mask for discrete control agents. When used, the agent will not be
+        /// able to perform the action passed as argument at the next decision. If no branch is
+        /// specified, the default branch will be 0. The actionIndex or actionIndices correspond
+        /// to the action the agent will be unable to perform.
+        /// </summary>
+        /// <param name="branch">The branch for which the actions will be masked</param>
+        /// <param name="actionIndex">The index of the masked action</param>
+        protected void SetActionMask(int branch, int actionIndex)
+        {
+            actionMasker.SetActionMask(branch, new int[1]{actionIndex});
+        }
+
+        /// <summary>
+        /// Modifies an action mask for discrete control agents. When used, the agent will not be
+        /// able to perform the action passed as argument at the next decision. If no branch is
+        /// specified, the default branch will be 0. The actionIndex or actionIndices correspond
+        /// to the action the agent will be unable to perform.
+        /// </summary>
+        /// <param name="branch">The branch for which the actions will be masked</param>
+        /// <param name="actionIndices">The indices of the masked actions</param>
+        protected void SetActionMask(int branch, IEnumerable<int> actionIndices)
+        {
+            actionMasker.SetActionMask(branch, actionIndices);
+        }
+        
 
         /// <summary>
         /// Adds a float observation to the vector observations of the agent.
@@ -638,7 +676,7 @@ namespace MLAgents
         /// <param name="observation">Observation.</param>
         protected void AddVectorObs(int observation)
         {
-            info.vectorObservation.Add((float) observation);
+            info.vectorObservation.Add(observation);
         }
 
         /// <summary>
@@ -705,6 +743,13 @@ namespace MLAgents
         protected void AddVectorObs(bool observation)
         {
             info.vectorObservation.Add(observation ? 1f : 0f);
+        }
+
+        protected void AddVectorObs(int observation, int range)
+        {
+            float[] oneHotVector = new float[range];
+            oneHotVector[observation] = 1;
+            info.vectorObservation.AddRange(oneHotVector);
         }
 
         /// <summary>
@@ -787,6 +832,20 @@ namespace MLAgents
         {
             action.textActions = textActions;
         }
+        
+        /// <summary>
+        /// Updates the value of the agent.
+        /// </summary>
+        /// <param name="textActions">Text actions.</param>
+        public void UpdateValueAction(float value)
+        {
+            action.value = value;
+        }
+
+        protected float GetValueEstimate()
+        {
+            return action.value;
+        }
 
         /// <summary>
         /// Scales continous action from [-1, 1] to arbitrary range.
@@ -809,6 +868,7 @@ namespace MLAgents
         /// The agent must set maxStepReached.</param>
         /// <param name="academyDone">If set to <c>true</c> 
         /// The agent must set done.</param>
+        /// <param name="academyStepCounter">Number of current steps in episode</param>
         void SetStatus(bool academyMaxStep, bool academyDone, int academyStepCounter)
         {
             if (academyDone)
