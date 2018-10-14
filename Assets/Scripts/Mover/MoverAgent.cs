@@ -47,32 +47,51 @@ namespace Assets.Scripts.Mover
             var dirToGo = Vector3.zero;
             var rotateDir = Vector3.zero;
 
-            int action = (int) act[0];
-            switch (action)
+            int move = (int) act[0];
+            switch (move)
             {
                 case 0:
-                    //Debug.Log("Rotating left");
-                    rotateDir = Vector3.up * -1f;
+                    // Do nothing
                     break;
                 case 1:
-                    //Debug.Log("Rotating right");
-                    rotateDir = Vector3.up * 1f;
-                    break;
-                case 2:
                     //Debug.Log("Moving forward");
                     dirToGo = gameObject.transform.forward * 1f;
                     break;
-                case 3:
+                case 2:
                     //Debug.Log("Moving backward");
                     dirToGo = gameObject.transform.forward * -1f;
                     break;
-                case 4:
-                    PickUp();
-                    //Debug.Log("Picking up");
+            }
+
+            int rotate = (int) act[1];
+            switch (rotate)
+            {
+                case 0:
+                    // Do nothing
                     break;
-                case 5:
-                    Drop();
+                case 1:
+                    //Debug.Log("Rotating left");
+                    rotateDir = Vector3.up * -1f;
+                    break;
+                case 2:
+                    //Debug.Log("Rotating right");
+                    rotateDir = Vector3.up * 1f;
+                    break;
+            }
+
+            int pickup = (int) act[2];
+            switch (pickup)
+            {
+                case 0:
+                    // Do nothing
+                    break;
+                case 1:
+                    //Debug.Log("Picking up");
+                    PickUp();
+                    break;
+                case 2:
                     //Debug.Log("Dropping");
+                    Drop();
                     break;
             }
 
