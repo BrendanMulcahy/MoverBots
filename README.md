@@ -11,7 +11,7 @@ The agents sense the world through ray casting.  This image shows a debugging vi
 
 ## Requirements
 
-Requires Unity 2018.2.12f1.  TensorflowSharp and other dependencies are included as BLOBs.
+Requires Unity 2018.3.0f2.  TensorflowSharp and other dependencies are included as BLOBs.
 
 If you would like to do training, you will need to:
  1. Clone https://github.com/Unity-Technologies/ml-agents
